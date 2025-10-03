@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  attendee
+}
+
+enum EventStatus {
+  draft
+  published
+  cancelled
+}
+
+enum RsvpStatus {
+  confirmed
+  cancelled
+}
+
+enum ClubRole {
+  member
+  admin
+}
+
+
+
+
+model User {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String    @unique
+  password    String
+  role        Role
+  phoneNumber String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  events       Event[]         @relation("UserEvents")
+  rsvps        RSVP[]
+  memberships  ClubMembership[]
+  clubsCreated Club[]          @relation("ClubCreator")
+}
+
+model Event {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  startTime   String
+  endTime     String
+  seatLimit   Int
+  status      EventStatus @default(draft)
+  bannerImage String?
+
+  // FKs
+  createdBy   Int
+  categoryId  Int
+  locationId  Int
+  clubId      Int?
+
+  // Relations
+  creator   User      @relation("UserEvents", fields: [createdBy], references: [id])
+  category  Category  @relation(fields: [categoryId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+  club      Club?     @relation(fields: [clubId], references: [id])
+  rsvps     RSVP[]
+}
+
+model RSVP {
+  id        Int       @id @default(autoincrement())
+  status    RsvpStatus @default( confirmed)
+  waitlist  Boolean   @default(false)
+  notes     String?
+  timestamp DateTime  @default(now())
+
+  // FKs
+  userId Int
+  eventId Int
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+}
+
+model Category {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  events Event[]
+}
+
+model Location {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  capacity    Int
+
+  events Event[]
+}
+
+model Club {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  contactEmail String?
+  logo        String?
+
+  createdBy Int
+  creator   User     @relation("ClubCreator", fields: [createdBy], references: [id])
+
+  events      Event[]
+  memberships ClubMembership[]
+}
+
+model ClubMembership {
+  id     Int   @id @default(autoincrement())
+  role   ClubRole @default(member)
+
+  // FKs
+  userId Int
+  clubId Int
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+  club Club @relation(fields: [clubId], references: [id])
+
+  @@unique([userId, clubId])
+}
+
