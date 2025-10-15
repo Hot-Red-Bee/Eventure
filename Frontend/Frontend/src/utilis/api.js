@@ -1,5 +1,5 @@
 // API utility functions for making HTTP requests
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {

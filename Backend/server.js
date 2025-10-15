@@ -3,15 +3,15 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 
-import userRoutes from "./routes/userRoutes.js";
-import eventRoutes from "./routes/eventRoutes.js";
-import rsvpRoutes from "./routes/rsvpRoutes.js";
-import attendanceRoutes from "./routes/attendanceRoutes.js";
-import authRoutes from "./routes/authRoute.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import locationRoutes from "./routes/locationRoutes.js";
-import clubRoutes from "./routes/clubRoutes.js";  
-import clubMembershipRoutes from "./routes/clubMembershipRoutes.js";
+import userRoutes from "./prisma/src/routes/userRoutes.js";
+import eventRoutes from "./prisma/src/routes/eventRoutes.js";
+import rsvpRoutes from "./prisma/src/routes/rsvpRoutes.js";
+import attendanceRoutes from "./prisma/src/routes/attendanceRoutes.js";
+import authRoutes from "./prisma/src/routes/authRoutes.js";
+import categoryRoutes from "./prisma/src/routes/categoryRoutes.js";
+import locationRoutes from "./prisma/src/routes/locationRoutes.js";
+import clubRoutes from "./prisma/src/routes/clubRoutes.js";
+import clubMembershipRoutes from "./prisma/src/routes/clubMembershipRoutes.js";
 
 
 dotenv.config();
@@ -20,7 +20,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 
