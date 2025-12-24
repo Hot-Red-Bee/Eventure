@@ -2,16 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaUser, FaSignOutAlt, FaUserShield, FaCalendarAlt, FaBell, FaTimes, FaBan, FaArrowLeft } from 'react-icons/fa';
+import { userAPI, rsvpAPI, eventAPI } from '../utilis/api';
 
-// Mock user, events, and RSVP data (replace with API calls to GET /users/:id and GET /rsvps?userId=:id)
+// lightweight mock fallback used only if API calls fail
 const mockUser = { id: 1, name: 'John Doe', email: 'john@example.com', role: 'attendee' };
 const mockEvents = [
   { id: 1, title: 'Campus Tech Talk', date: '2025-09-15', location: { name: 'Main Hall' } },
   { id: 2, title: 'Music Festival', date: '2025-10-01', location: { name: 'Outdoor Quad' } },
 ];
 const mockRSVPs = [
-  { id: 1, userId: 1, eventId: 1, status: 'confirmed', waitlist: false, notes: 'Needs wheelchair access', timestamp: '2025-09-01T10:00:00Z' },
-  { id: 2, userId: 1, eventId: 2, status: 'confirmed', waitlist: false, notes: '', timestamp: '2025-09-02T12:00:00Z' },
+  { id: 1, userId: 1, eventId: 1, status: 'confirmed', notes: 'Needs wheelchair access', timestamp: '2025-09-01T10:00:00Z' },
+  { id: 2, userId: 1, eventId: 2, status: 'confirmed', notes: '', timestamp: '2025-09-02T12:00:00Z' },
 ];
 
 const UserDashboard = () => {
@@ -20,46 +21,87 @@ const UserDashboard = () => {
   const [rsvps, setRsvps] = useState([]);
   const [events, setEvents] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Simulate fetching user, events and rsvps
-    if (mockUser) {
-      setUser(mockUser);
-      setEvents(mockEvents);
-      setRsvps(mockRSVPs.filter((r) => r.userId === mockUser.id));
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const meRes = await userAPI.getProfile().catch(() => null);
+        const me = meRes?.user || meRes || null;
 
+        // if no authenticated user, fall back to mock (keeps dev flow)
+        if (!me) {
+          setUser(mockUser);
+          setEvents(mockEvents);
+          setRsvps(mockRSVPs.filter((r) => r.userId === mockUser.id));
+          buildNotifications(mockRSVPs.filter((r) => r.userId === mockUser.id), mockEvents);
+          return;
+        }
+
+        setUser(me);
+
+        const [rsvpsRes, eventsRes] = await Promise.all([
+          rsvpAPI.getUserRSVPs(me.id).catch(() => []),
+          eventAPI.getAllEvents().catch(() => []),
+        ]);
+
+        const rsvpsList = rsvpsRes?.rsvps || rsvpsRes || [];
+        setRsvps(Array.isArray(rsvpsList) ? rsvpsList : []);
+
+        const eventsList = eventsRes?.events || eventsRes || [];
+        setEvents(Array.isArray(eventsList) ? eventsList : []);
+
+        buildNotifications(rsvpsList, eventsList);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        // fallback to mock data on error to keep UI usable in dev
+        setUser(mockUser);
+        setEvents(mockEvents);
+        setRsvps(mockRSVPs.filter((r) => r.userId === mockUser.id));
+        buildNotifications(mockRSVPs.filter((r) => r.userId === mockUser.id), mockEvents);
+        setError('Failed to load live data — showing demo data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const buildNotifications = (rsvpsList, eventsList) => {
       const newNotifications = [];
-      mockRSVPs.forEach((rsvp) => {
-        const event = mockEvents.find((e) => e.id === rsvp.eventId);
+      rsvpsList.forEach((rsvp) => {
+        const event = (eventsList || []).find((e) => Number(e.id) === Number(rsvp.eventId));
         if (event) {
           newNotifications.push({
             id: `rsvp-${rsvp.id}`,
-            message: `You have RSVP'd to ${event.title} on ${new Date(event.date).toLocaleDateString()}.`,
+            message: `You have RSVP'd to ${event.title} on ${event.date ? new Date(event.date).toLocaleDateString() : 'TBD'}.`,
             type: 'rsvp',
-            timestamp: rsvp.timestamp,
+            timestamp: rsvp.timestamp || new Date().toISOString(),
           });
-          const eventDate = new Date(event.date);
-          const today = new Date();
-          const daysUntilEvent = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-          if (daysUntilEvent > 0 && daysUntilEvent <= 7) {
-            newNotifications.push({
-              id: `reminder-${rsvp.id}`,
-              message: `Reminder: ${event.title} is happening in ${daysUntilEvent} day${daysUntilEvent > 1 ? 's' : ''}!`,
-              type: 'reminder',
-              timestamp: new Date().toISOString(),
-            });
+          const eventDate = event.date ? new Date(event.date) : null;
+          if (eventDate) {
+            const today = new Date();
+            const daysUntilEvent = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            if (daysUntilEvent > 0 && daysUntilEvent <= 7) {
+              newNotifications.push({
+                id: `reminder-${rsvp.id}`,
+                message: `Reminder: ${event.title} is happening in ${daysUntilEvent} day${daysUntilEvent > 1 ? 's' : ''}!`,
+                type: 'reminder',
+                timestamp: new Date().toISOString(),
+              });
+            }
           }
         }
       });
       setNotifications(newNotifications);
-    } else {
-      setError('User not found. Please log in.');
-    }
+    };
+
+    load();
   }, []);
 
   const handleLogout = () => {
-    // Replace with real logout logic (clear auth tokens, context, etc.)
+    // replace with real logout (authAPI.logout etc.) if implemented
     setUser(null);
     navigate('/login');
   };
@@ -67,6 +109,19 @@ const UserDashboard = () => {
   const dismissNotification = (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
+
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="container mx-auto py-6 px-4">
+        <p className="text-[var(--color-text)]">Loading dashboard...</p>
+      </motion.div>
+    );
+  }
 
   if (!user) {
     return (
@@ -90,10 +145,9 @@ const UserDashboard = () => {
       transition={{ duration: 0.4 }}
       className="container mx-auto py-6 sm:py-10 px-4 bg-[var(--color-background)]"
     >
-
       <div className="mb-4">
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="inline-flex items-center px-3 py-2 rounded-md text-[var(--color-text)] bg-white/0 hover:bg-white/5 transition text-sm sm:text-base shadow-sm"
           aria-label="Go back"
         >
@@ -101,9 +155,8 @@ const UserDashboard = () => {
           Back
         </button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar / Dashboard Nav */}
         <aside className="md:col-span-1 bg-white p-4 rounded-xl shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white">
@@ -139,9 +192,7 @@ const UserDashboard = () => {
           </nav>
         </aside>
 
-        {/* Main content */}
         <section className="md:col-span-3 space-y-6">
-          {/* Notifications */}
           <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="font-semibold text-[var(--color-text)] mb-3">Notifications</h3>
             {notifications.length === 0 ? (
@@ -160,7 +211,6 @@ const UserDashboard = () => {
             )}
           </div>
 
-          {/* Upcoming events / RSVPs */}
           <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="font-semibold text-[var(--color-text)] mb-3">Your RSVPs</h3>
             {rsvps.length === 0 ? (
@@ -168,16 +218,16 @@ const UserDashboard = () => {
             ) : (
               <ul className="space-y-3">
                 {rsvps.map((r) => {
-                  const ev = events.find((e) => e.id === r.eventId) || { title: 'Unknown event', date: '' };
+                  const ev = events.find((e) => Number(e.id) === Number(r.eventId)) || { title: 'Unknown event', date: '', location: {} };
                   return (
                     <li key={r.id} className="p-3 rounded border border-[var(--color-text)]/10">
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium text-[var(--color-text)]">{ev.title}</p>
-                          <p className="text-sm text-[var(--color-text)]/70">{ev.date} • {ev.location?.name}</p>
+                          <p className="text-sm text-[var(--color-text)]/70">{ev.date ? new Date(ev.date).toLocaleDateString() : ev.date} • {ev.location?.name || '-'}</p>
                           {r.notes && <p className="text-sm text-[var(--color-text)]/80 mt-1">Notes: {r.notes}</p>}
                         </div>
-                        <div className="text-sm text-[var(--color-primary)]">{r.status}</div>
+                        <div className={`text-sm ${r.status === 'confirmed' ? 'text-[var(--color-accent)]' : 'text-red-600'}`}>{r.status}</div>
                       </div>
                     </li>
                   );

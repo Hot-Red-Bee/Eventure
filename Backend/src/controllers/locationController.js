@@ -1,6 +1,6 @@
 // controllers/locationController.js
 import { PrismaClient } from "@prisma/client";
-import { locationSchema } from "../../validation/locationValidation.js";
+import { locationSchema } from "../validation/locationValidation.js";
 
 const prisma = new PrismaClient();
 

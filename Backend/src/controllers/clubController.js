@@ -1,6 +1,6 @@
 // controllers/clubController.js
 import { PrismaClient } from "@prisma/client";
-import { clubSchema } from "../../validation/clubValidation.js";
+import { clubSchema } from "../validation/clubValidation.js";
 
 const prisma = new PrismaClient();
 

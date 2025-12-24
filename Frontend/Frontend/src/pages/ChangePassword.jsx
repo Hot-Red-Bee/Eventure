@@ -1,14 +1,15 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaLock, FaBan, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
-
-// Mock user and API response (replace with real auth and PUT /users/:id/password)
-const mockUser = { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin' };
-const mockChangePasswordResponse = { success: true, message: 'Password updated successfully' };
+import { userAPI, authAPI } from '../utilis/api';
 
 const ChangePassword = () => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -16,42 +17,76 @@ const ChangePassword = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoadingUser(true);
+        const data = await userAPI.getProfile();
+        setCurrentUser(data.user || data || null);
+      } catch (err) {
+        // not logged in or failed — keep currentUser null
+        console.warn('Failed to load profile:', err);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validation
-    if (!formData.currentPassword || !formData.newPassword || !formData.confirmNewPassword) {
+    setError('');
+    setSuccess('');
+
+    const { currentPassword, newPassword, confirmNewPassword } = formData;
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
       setError('Please fill out all fields.');
       return;
     }
-    if (formData.newPassword !== formData.confirmNewPassword) {
+    if (newPassword !== confirmNewPassword) {
       setError('New passwords do not match.');
       return;
     }
-    if (formData.newPassword.length < 6) {
+    if (newPassword.length < 6) {
       setError('New password must be at least 6 characters long.');
       return;
     }
-    // Mock auth check (replace with real auth via src/utils/auth.js)
-    if (!mockUser) {
+    if (!currentUser) {
       setError('Please log in to change your password.');
       return;
     }
-    // Mock API call (replace with PUT /users/:id/password)
-    if (formData.currentPassword === 'password' && mockChangePasswordResponse.success) {
-      setSuccess(mockChangePasswordResponse.message);
-      setTimeout(() => navigate('/profile'), 2000);
-    } else {
-      setError('Current password is incorrect.');
+
+    try {
+      setSubmitting(true);
+      const res = await authAPI.changePassword(currentPassword, newPassword);
+      const message = res.message || res.msg || 'Password updated successfully';
+      setSuccess(message);
+      setTimeout(() => navigate('/profile'), 1500);
+    } catch (err) {
+      console.error('Change password error:', err);
+      setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to change password');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((s) => ({ ...s, [name]: value }));
   };
 
-  if (!mockUser) {
+  if (loadingUser) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="container mx-auto py-6 px-4">
+        <p className="text-[var(--color-text)]">Loading...</p>
+      </motion.div>
+    );
+  }
+
+  if (!currentUser) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -60,6 +95,9 @@ const ChangePassword = () => {
         className="container mx-auto py-6 sm:py-8 bg-[var(--color-background)] px-4"
       >
         <p className="text-red-600 text-sm sm:text-base">Please log in to change your password.</p>
+        <p className="mt-4">
+          <Link to="/login" className="text-[var(--color-primary)]">Go to Login</Link>
+        </p>
       </motion.div>
     );
   }
@@ -144,15 +182,16 @@ const ChangePassword = () => {
         </div>
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md"
+          disabled={submitting}
+          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md disabled:opacity-60"
         >
           <FaLock className="mr-2" />
-          Change Password
+          {submitting ? 'Updating...' : 'Change Password'}
         </button>
       </form>
       <p className="text-center text-[var(--color-text)] text-sm sm:text-base mt-4">
         Back to{' '}
-        <Link to="/Profile" className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition">
+        <Link to="/profile" className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition">
           Profile
         </Link>
       </p>

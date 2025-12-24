@@ -1,6 +1,6 @@
 // controllers/categoryController.js
 import { PrismaClient } from "@prisma/client";
-import { categorySchema } from "../../validation/categoryValidation.js";
+import { categorySchema } from "../validation/categoryValidation.js";
 
 const prisma = new PrismaClient();
 

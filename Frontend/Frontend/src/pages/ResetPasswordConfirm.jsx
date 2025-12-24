@@ -2,52 +2,61 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaLock, FaBan, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
-
-// Mock API response (replace with POST /reset-password/confirm)
-const mockResetConfirmResponse = { success: true, message: 'Password reset successfully' };
+import { authAPI } from '../utilis/api';
 
 const ResetPasswordConfirm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+
   const [formData, setFormData] = useState({
     newPassword: '',
     confirmNewPassword: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((s) => ({ ...s, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validation
+    setError('');
+    setSuccess('');
+
     if (!token) {
       setError('Invalid or missing reset token.');
       return;
     }
-    if (!formData.newPassword || !formData.confirmNewPassword) {
+    const { newPassword, confirmNewPassword } = formData;
+    if (!newPassword || !confirmNewPassword) {
       setError('Please fill out all fields.');
       return;
     }
-    if (formData.newPassword !== formData.confirmNewPassword) {
+    if (newPassword !== confirmNewPassword) {
       setError('Passwords do not match.');
       return;
     }
-    if (formData.newPassword.length < 6) {
+    if (newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
     }
-    // Mock API call (replace with POST /reset-password/confirm)
-    if (mockResetConfirmResponse.success) {
-      setSuccess(mockResetConfirmResponse.message);
-      setTimeout(() => navigate('/login'), 2000);
-    } else {
-      setError('Failed to reset password. Please try again.');
-    }
-  };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    try {
+      setSubmitting(true);
+      const res = await authAPI.confirmResetPassword(token, newPassword);
+      const message = res?.message || res?.msg || 'Password reset successfully';
+      setSuccess(message);
+      setTimeout(() => navigate('/login'), 1800);
+    } catch (err) {
+      console.error('Reset confirm error:', err);
+      setError(err?.response?.data?.message || err?.response?.data?.error || err.message || 'Failed to reset password. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,11 +76,12 @@ const ResetPasswordConfirm = () => {
           Back
         </button>
       </div>
-      
+
       <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-6 flex items-center">
         <FaLock className="mr-2 text-[var(--color-accent)]" />
         Reset Password
       </h2>
+
       <form onSubmit={handleSubmit} className="max-w-full sm:max-w-md mx-auto space-y-4 bg-white p-4 sm:p-6 rounded-xl shadow-lg">
         {error && (
           <p className="text-red-600 flex items-center text-sm sm:text-base">
@@ -83,6 +93,7 @@ const ResetPasswordConfirm = () => {
             <FaCheckCircle className="mr-2" /> {success}
           </p>
         )}
+
         <div>
           <label htmlFor="newPassword" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             New Password *
@@ -98,6 +109,7 @@ const ResetPasswordConfirm = () => {
             required
           />
         </div>
+
         <div>
           <label htmlFor="confirmNewPassword" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Confirm New Password *
@@ -113,14 +125,17 @@ const ResetPasswordConfirm = () => {
             required
           />
         </div>
+
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md"
+          disabled={submitting}
+          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md disabled:opacity-60"
         >
           <FaLock className="mr-2" />
-          Reset Password
+          {submitting ? 'Resetting...' : 'Reset Password'}
         </button>
       </form>
+
       <p className="text-center text-[var(--color-text)] text-sm sm:text-base mt-4">
         Back to{' '}
         <Link to="/login" className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition">

@@ -1,7 +1,7 @@
 // routes/locationRoutes.js
 import express from "express";
 import { createLocation, getLocations, deleteLocation } from "../controllers/locationController.js";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

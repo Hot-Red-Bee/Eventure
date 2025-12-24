@@ -1,4 +1,4 @@
-// validations/rsvpValidation.js
+
 import Joi from "joi";
 
 export const rsvpSchema = Joi.object({

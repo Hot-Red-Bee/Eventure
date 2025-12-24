@@ -1,181 +1,80 @@
-// API utility functions for making HTTP requests
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import axios from 'axios';
 
-// Generic API request function
-const apiRequest = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  };
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // Add auth token if available
-  const token = localStorage.getItem('authToken');
+const api = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true, // send cookies (httpOnly auth cookie)
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// helper to set/remove Authorization header (if you use token auth)
+export const setAuthToken = (token) => {
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API request failed:', error);
-    throw error;
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
   }
 };
 
-// Auth API calls
+// Auth API
 export const authAPI = {
-  login: (credentials) => 
-    apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    }),
-
-  signup: (userData) => 
-    apiRequest('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    }),
-
-  logout: () => 
-    apiRequest('/auth/logout', {
-      method: 'POST',
-    }),
-
-  resetPassword: (email) => 
-    apiRequest('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    }),
-
-  confirmResetPassword: (token, newPassword) => 
-    apiRequest('/auth/reset-password/confirm', {
-      method: 'POST',
-      body: JSON.stringify({ token, newPassword }),
-    }),
-
-  changePassword: (currentPassword, newPassword) => 
-    apiRequest('/auth/change-password', {
-      method: 'PUT',
-      body: JSON.stringify({ currentPassword, newPassword }),
-    }),
+  login: (credentials) => api.post('/auth/login', credentials).then((r) => r.data),
+  signup: (userData) => api.post('/auth/register', userData).then((r) => r.data),
+  logout: () => api.post('/auth/logout').then((r) => r.data),
+  resetPassword: (email) => api.post('/auth/reset-password', { email }).then((r) => r.data),
+  confirmResetPassword: (token, newPassword) =>
+    api.post('/auth/reset-password/confirm', { token, newPassword }).then((r) => r.data),
+  changePassword: (currentPassword, newPassword) =>
+    api.put('/auth/change-password', { currentPassword, newPassword }).then((r) => r.data),
 };
 
-// User API calls
+// User API
 export const userAPI = {
-  getProfile: () => apiRequest('/users/profile'),
-  
-  updateProfile: (userData) => 
-    apiRequest('/users/profile', {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    }),
-
-  getAllUsers: () => apiRequest('/users'),
-
-  updateUser: (userId, userData) => 
-    apiRequest(`/users/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    }),
-
-  deleteUser: (userId) => 
-    apiRequest(`/users/${userId}`, {
-      method: 'DELETE',
-    }),
+  getProfile: () => api.get('/users/me').then((r) => r.data),
+  updateProfile: (userData) => api.put('/users/me', userData).then((r) => r.data),
+  getAllUsers: () => api.get('/users').then((r) => r.data),
+  updateUser: (userId, userData) => api.put(`/users/${userId}`, userData).then((r) => r.data),
+  deleteUser: (userId) => api.delete(`/users/${userId}`).then((r) => r.data),
 };
 
-// Event API calls
+// Event API
 export const eventAPI = {
   getAllEvents: (filters = {}) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) queryParams.append(key, value);
-    });
-    const queryString = queryParams.toString();
-    return apiRequest(`/events${queryString ? `?${queryString}` : ''}`);
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== '') params.append(k, v); });
+    const qs = params.toString();
+    return api.get(`/events${qs ? `?${qs}` : ''}`).then((r) => r.data);
   },
-
-  getEvent: (eventId) => apiRequest(`/events/${eventId}`),
-
-  createEvent: (eventData) => 
-    apiRequest('/events', {
-      method: 'POST',
-      body: JSON.stringify(eventData),
-    }),
-
-  updateEvent: (eventId, eventData) => 
-    apiRequest(`/events/${eventId}`, {
-      method: 'PUT',
-      body: JSON.stringify(eventData),
-    }),
-
-  deleteEvent: (eventId) => 
-    apiRequest(`/events/${eventId}`, {
-      method: 'DELETE',
-    }),
+  getEvent: (eventId) => api.get(`/events/${eventId}`).then((r) => r.data),
+  createEvent: (eventData) => api.post('/events', eventData).then((r) => r.data),
+  updateEvent: (eventId, eventData) => api.put(`/events/${eventId}`, eventData).then((r) => r.data),
+  deleteEvent: (eventId) => api.delete(`/events/${eventId}`).then((r) => r.data),
 };
 
-// RSVP API calls
+// RSVP API
 export const rsvpAPI = {
-  createRSVP: (rsvpData) => 
-    apiRequest('/rsvps', {
-      method: 'POST',
-      body: JSON.stringify(rsvpData),
-    }),
-
-  getUserRSVPs: (userId) => apiRequest(`/rsvps?userId=${userId}`),
-
-  getEventRSVPs: (eventId) => apiRequest(`/rsvps?eventId=${eventId}`),
-
-  updateRSVP: (rsvpId, rsvpData) => 
-    apiRequest(`/rsvps/${rsvpId}`, {
-      method: 'PUT',
-      body: JSON.stringify(rsvpData),
-    }),
-
-  deleteRSVP: (rsvpId) => 
-    apiRequest(`/rsvps/${rsvpId}`, {
-      method: 'DELETE',
-    }),
+  createRSVP: (rsvpData) => api.post('/rsvps', rsvpData).then((r) => r.data),
+  getUserRSVPs: (userId) => api.get(`/rsvps${userId ? `?userId=${userId}` : ''}`).then((r) => r.data),
+  getEventRSVPs: (eventId) => api.get(`/rsvps?eventId=${eventId}`).then((r) => r.data),
+  updateRSVP: (rsvpId, rsvpData) => api.put(`/rsvps/${rsvpId}`, rsvpData).then((r) => r.data),
+  deleteRSVP: (rsvpId) => api.delete(`/rsvps/${rsvpId}`).then((r) => r.data),
 };
 
-// Category and Location API calls
+// Category API
 export const categoryAPI = {
-  getAllCategories: () => apiRequest('/categories'),
-  
-  createCategory: (categoryData) => 
-    apiRequest('/categories', {
-      method: 'POST',
-      body: JSON.stringify(categoryData),
-    }),
+  getAllCategories: () => api.get('/categories').then((r) => r.data),
+  createCategory: (categoryData) => api.post('/categories', categoryData).then((r) => r.data),
 };
 
+// Location API
 export const locationAPI = {
-  getAllLocations: () => apiRequest('/locations'),
-  
-  createLocation: (locationData) => 
-    apiRequest('/locations', {
-      method: 'POST',
-      body: JSON.stringify(locationData),
-    }),
+  getAllLocations: () => api.get('/locations').then((r) => r.data),
+  createLocation: (locationData) => api.post('/locations', locationData).then((r) => r.data),
 };
 
-export default {
-  authAPI,
-  userAPI,
-  eventAPI,
-  rsvpAPI,
-  categoryAPI,
-  locationAPI,
-};
+
+
+export default api;

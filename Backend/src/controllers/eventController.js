@@ -1,6 +1,6 @@
 // controllers/eventController.js
 import { PrismaClient } from "@prisma/client";
-import { eventSchema } from "../../validation/eventValidation.js";
+import { eventSchema } from "../validation/eventValidation.js";
 
 const prisma = new PrismaClient();
 

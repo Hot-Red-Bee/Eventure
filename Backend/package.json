@@ -1,10 +1,12 @@
 {
+  "type":"module",
   "devDependencies": {
     "nodemon": "^3.1.10",
     "prisma": "^6.15.0"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
+    "@supabase/supabase-js": "^2.89.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -15,6 +17,8 @@
     "nodemailer": "^7.0.6"
   },
   "scripts": {
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "dev": "nodemon --watch src --exec node server.js",
+    "start": "node server.js"
   }
 }

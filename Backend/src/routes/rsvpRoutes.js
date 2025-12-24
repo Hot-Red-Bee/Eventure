@@ -1,7 +1,7 @@
 // routes/rsvpRoutes.js
 import express from "express";
 import { rsvpEvent, cancelRsvp } from "../controllers/rsvpController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

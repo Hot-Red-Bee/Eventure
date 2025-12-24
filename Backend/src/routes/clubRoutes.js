@@ -1,7 +1,7 @@
 // routes/clubRoutes.js
 import express from "express";
 import { createClub, getClubs, deleteClub } from "../controllers/clubController.js";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

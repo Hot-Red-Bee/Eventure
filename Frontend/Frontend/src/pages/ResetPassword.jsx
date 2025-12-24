@@ -2,19 +2,20 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaLock, FaBan, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
-
-// Mock API response (replace with POST /reset-password)
-const mockResetResponse = { success: true, message: 'Password reset link sent to your email. Check for a link to /reset-password/confirm?token=...' };
+import { authAPI } from '../utilis/api';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validation
+    setError('');
+    setSuccess('');
+
     if (!email) {
       setError('Please enter your email.');
       return;
@@ -23,12 +24,18 @@ const ResetPassword = () => {
       setError('Please enter a valid email address.');
       return;
     }
-    // Mock API call (replace with POST /reset-password)
-    if (mockResetResponse.success) {
-      setSuccess(mockResetResponse.message);
+
+    try {
+      setSubmitting(true);
+      const res = await authAPI.resetPassword(email);
+      const message = res?.message || res?.msg || 'Password reset link sent. Check your email.';
+      setSuccess(message);
       setTimeout(() => navigate('/login'), 2000);
-    } else {
-      setError('Failed to send reset link. Please try again.');
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to send reset link. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -49,11 +56,12 @@ const ResetPassword = () => {
           Back
         </button>
       </div>
-      
+
       <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-6 flex items-center">
         <FaLock className="mr-2 text-[var(--color-accent)]" />
         Reset Password
       </h2>
+
       <form onSubmit={handleSubmit} className="max-w-full sm:max-w-md mx-auto space-y-4 bg-white p-4 sm:p-6 rounded-xl shadow-lg">
         {error && (
           <p className="text-red-600 flex items-center text-sm sm:text-base">
@@ -65,6 +73,7 @@ const ResetPassword = () => {
             <FaCheckCircle className="mr-2" /> {success}
           </p>
         )}
+
         <div>
           <label htmlFor="email" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Email *
@@ -79,14 +88,17 @@ const ResetPassword = () => {
             required
           />
         </div>
+
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md"
+          disabled={submitting}
+          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md disabled:opacity-60"
         >
           <FaLock className="mr-2" />
-          Send Reset Link
+          {submitting ? 'Sending...' : 'Send Reset Link'}
         </button>
       </form>
+
       <p className="text-center text-[var(--color-text)] text-sm sm:text-base mt-4">
         Remember your password?{' '}
         <Link to="/login" className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition">

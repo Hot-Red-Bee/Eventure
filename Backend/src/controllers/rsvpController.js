@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { rsvpSchema } from "../../validation/rsvpValidation.js";
+import { rsvpSchema } from "../validation/rsvpValidation.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
 const prisma = new PrismaClient();

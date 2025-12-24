@@ -1,8 +1,8 @@
-// controllers/authController.js
+
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { registerSchema, loginSchema } from "../../validation/authValidation.js";
+import { registerSchema, loginSchema } from "../validation/authValidation.js";
 
 const prisma = new PrismaClient();
 

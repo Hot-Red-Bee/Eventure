@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaUserPlus, FaBan, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
-
-// Mock API response for testing (replace with real POST /signup)
-const mockSignUpResponse = { success: true, message: 'User registered successfully' };
+import { authAPI, setAuthToken } from '../utilis/api';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -18,42 +16,63 @@ const SignUp = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleToggle = () => {
-    setIsAdmin(!isAdmin);
-    setFormData({ ...formData, role: isAdmin ? 'attendee' : 'admin' });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError('Please fill out all fields.');
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-    // Mock API call (replace with POST /signup)
-    if (mockSignUpResponse.success) {
-      setSuccess(mockSignUpResponse.message);
-      setTimeout(() => navigate(formData.role === 'admin' ? '/admin' : '/dashboard'), 2000);
-    } else {
-      setError('Registration failed. Please try again.');
-    }
+    const nextIsAdmin = !isAdmin;
+    setIsAdmin(nextIsAdmin);
+    setFormData((s) => ({ ...s, role: nextIsAdmin ? 'admin' : 'attendee' }));
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((s) => ({ ...s, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    const { name, email, password, confirmPassword, role } = formData;
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Please fill out all fields.');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await authAPI.signup({ name, email, password, role });
+      // backend may return { user, token, message } or { message }
+      const token = res?.token || res?.data?.token;
+      if (token) setAuthToken(token);
+      const message = res?.message || res?.msg || 'Registration successful';
+      setSuccess(message);
+      // if backend returns user, derive role; otherwise use selected role
+      const user = res?.user || res?.data?.user || null;
+      const redirectRole = user?.role || role;
+      setTimeout(() => {
+        if (redirectRole === 'admin') navigate('/admin');
+        else navigate('/dashboard');
+      }, 900);
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err?.response?.data?.message || err?.response?.data?.error || err.message || 'Registration failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -73,13 +92,15 @@ const SignUp = () => {
           Back
         </button>
       </div>
-      
+
       <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-6 flex items-center">
         <FaUserPlus className="mr-2 text-[var(--color-accent)]" />
         {isAdmin ? 'Admin Sign Up' : 'User Sign Up'}
       </h2>
+
       <div className="max-w-full sm:max-w-md mx-auto mb-4">
         <button
+          type="button"
           onClick={handleToggle}
           className="w-full px-4 py-2 bg-[var(--color-accent)] text-white rounded-xl hover:bg-[var(--color-accent)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md"
         >
@@ -87,6 +108,7 @@ const SignUp = () => {
           Switch to {isAdmin ? 'User' : 'Admin'} Sign Up
         </button>
       </div>
+
       <form onSubmit={handleSubmit} className="max-w-full sm:max-w-md mx-auto space-y-4 bg-white p-4 sm:p-6 rounded-xl shadow-lg">
         {error && (
           <p className="text-red-600 flex items-center text-sm sm:text-base">
@@ -98,6 +120,7 @@ const SignUp = () => {
             <FaCheckCircle className="mr-2" /> {success}
           </p>
         )}
+
         <div>
           <label htmlFor="name" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Full Name *
@@ -113,6 +136,7 @@ const SignUp = () => {
             required
           />
         </div>
+
         <div>
           <label htmlFor="email" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Email *
@@ -128,6 +152,7 @@ const SignUp = () => {
             required
           />
         </div>
+
         <div>
           <label htmlFor="password" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Password *
@@ -143,6 +168,7 @@ const SignUp = () => {
             required
           />
         </div>
+
         <div>
           <label htmlFor="confirmPassword" className="block text-[var(--color-text)] font-medium mb-1 text-sm sm:text-base">
             Confirm Password *
@@ -158,14 +184,17 @@ const SignUp = () => {
             required
           />
         </div>
+
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md"
+          disabled={submitting}
+          className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/80 transition flex items-center justify-center text-sm sm:text-base shadow-md disabled:opacity-60"
         >
           <FaUserPlus className="mr-2" />
-          Sign Up
+          {submitting ? 'Signing up...' : 'Sign Up'}
         </button>
       </form>
+
       <p className="text-center text-[var(--color-text)] text-sm sm:text-base mt-4">
         Already have an account?{' '}
         <Link to="/login" className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition">

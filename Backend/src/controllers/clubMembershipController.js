@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   createClubMembershipSchema,
   updateClubMembershipSchema,
-} from "../validations/clubMembershipValidation.js";
+} from "../validation/clubMembershipValidation.js";
 
 const prisma = new PrismaClient();
 
