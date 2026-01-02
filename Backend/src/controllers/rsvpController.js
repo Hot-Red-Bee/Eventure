@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/db.js";
 import { rsvpSchema } from "../validation/rsvpValidation.js";
 import { sendEmail } from "../utils/sendEmail.js";
-
-const prisma = new PrismaClient();
 
 // RSVP to Event (Attendees)
 export const rsvpEvent = async (req, res) => {
@@ -19,21 +17,21 @@ export const rsvpEvent = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const confirmedCount = event.rsvps.filter((r) => r.status === "CONFIRMED").length;
+    const confirmedCount = event.rsvps.filter((r) => r.status === "confirmed").length;
     const waitlist = confirmedCount >= event.seatLimit;
 
-    const rsvp = await prisma.rSVP.upsert({
+    const rsvp = await prisma.rsvp.upsert({
       where: {
         userId_eventId: {
           userId: req.user.id,
           eventId: Number(value.eventId),
         },
       },
-      update: { status: "CONFIRMED", waitlist, notes: value.notes },
+      update: { status: "confirmed", waitlist, notes: value.notes },
       create: {
         userId: req.user.id,
         eventId: Number(value.eventId),
-        status: "CONFIRMED",
+        status: "confirmed",
         waitlist,
         notes: value.notes,
       },
@@ -66,9 +64,9 @@ export const rsvpEvent = async (req, res) => {
 export const cancelRsvp = async (req, res) => {
   try {
     const eventId = Number(req.params.id);
-    const rsvp = await prisma.rSVP.updateMany({
+    const rsvp = await prisma.rsvp.updateMany({
       where: { userId: req.user.id, eventId },
-      data: { status: "CANCELLED" },
+      data: { status: "cancelled" },
     });
 
     res.json({ message: "RSVP cancelled", rsvp });
@@ -82,7 +80,7 @@ export const cancelRsvp = async (req, res) => {
 export const getEventRsvps = async (req, res) => {
   try {
     const eventId = Number(req.params.eventId);
-    const rsvps = await prisma.rSVP.findMany({
+    const rsvps = await prisma.rsvp.findMany({
       where: { eventId },
       include: { user: true },
     });

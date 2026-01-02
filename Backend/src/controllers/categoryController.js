@@ -1,8 +1,6 @@
 // controllers/categoryController.js
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/db.js";
 import { categorySchema } from "../validation/categoryValidation.js";
-
-const prisma = new PrismaClient();
 
 // Create category (Admin only)
 export const createCategory = async (req, res) => {

@@ -1,8 +1,7 @@
 // controllers/eventController.js
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/db.js";
 import { eventSchema } from "../validation/eventValidation.js";
-
-const prisma = new PrismaClient();
+import { sendEmail } from "../utils/sendEmail.js";
 
 
 
@@ -125,12 +124,12 @@ export const cancelEvent = async (req, res) => {
 
     const event = await prisma.event.update({
       where: { id: Number(eventId) },
-      data: { status: "CANCELLED" },
+      data: { status: "cancelled" },
     });
 
     // 📩 Notify all RSVPs
     const rsvps = await prisma.rsvp.findMany({
-      where: { eventId: event.id, status: "CONFIRMED" },
+      where: { eventId: event.id, status: "confirmed" },
       include: { user: true },
     });
 

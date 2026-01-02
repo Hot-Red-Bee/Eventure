@@ -1,10 +1,9 @@
 
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { registerSchema, loginSchema } from "../validation/authValidation.js";
 
-const prisma = new PrismaClient();
+import prisma from "../config/db.js";
 
 // Register
 export const registerUser = async (req, res) => {

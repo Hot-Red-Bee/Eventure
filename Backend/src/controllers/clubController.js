@@ -1,8 +1,6 @@
 // controllers/clubController.js
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/db.js";
 import { clubSchema } from "../validation/clubValidation.js";
-
-const prisma = new PrismaClient();
 
 // Create club (Admin only)
 export const createClub = async (req, res) => {

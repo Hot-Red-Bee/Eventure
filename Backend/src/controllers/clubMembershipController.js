@@ -1,10 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import {
   createClubMembershipSchema,
   updateClubMembershipSchema,
 } from "../validation/clubMembershipValidation.js";
 
-const prisma = new PrismaClient();
+import prisma from "../config/db.js";
 
 /**
  * Create membership (user joins club)
