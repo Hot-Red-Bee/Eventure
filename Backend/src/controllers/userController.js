@@ -2,7 +2,7 @@ import prisma from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import transporter from "../config/email.js";
-import { registerSchema, loginSchema } from "../Validation/userValidation.js";
+import { registerSchema, loginSchema } from "../validation/userValidation.js";
 
 // REGISTER
 export const registerUser = async (req, res) => {

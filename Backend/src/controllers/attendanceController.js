@@ -1,6 +1,6 @@
 // controllers/attendanceController.js
-import prisma from "../prismaClient.js";
-import { attendanceSchema } from "../validations/attendanceValidation.js";
+import prisma from "../config/db.js";
+import { attendanceSchema } from "../validation/attendanceValidation.js";
 
 // Mark Attendance
 export const markAttendance = async (req, res) => {

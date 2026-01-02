@@ -1,8 +1,10 @@
 // API utility functions for making HTTP requests
+import axios from 'axios';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE_URL,
   withCredentials: true, // send cookies (httpOnly auth cookie)
   headers: {
     'Content-Type': 'application/json',
