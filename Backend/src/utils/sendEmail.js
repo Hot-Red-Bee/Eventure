@@ -23,9 +23,11 @@ export const transporter = nodemailer.createTransport({
 });
 
 // optional quick verify at startup (does not throw, only logs)
-transporter.verify()
-  .then(() => console.log('Email transporter ready'))
-  .catch((err) => console.warn('Email transporter verify failed:', err));
+// Optional verify at startup is noisy on platforms that block outbound SMTP.
+// Keep it disabled to avoid startup timeout errors; errors will surface when sending.
+// transporter.verify()
+//   .then(() => console.log('Email transporter ready'))
+//   .catch((err) => console.warn('Email transporter verify failed:', err));
 
 // ...existing code...
 /**

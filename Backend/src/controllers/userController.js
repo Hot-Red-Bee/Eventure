@@ -33,13 +33,17 @@ export const registerUser = async (req, res) => {
       },
     });
 
-    // Send welcome email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Welcome to Eventure 🎉",
-      text: `Hi ${name}, welcome to Eventure! Your account has been created successfully.`,
-    });
+    // Send welcome email (don't block registration if email fails)
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Welcome to Eventure 🎉",
+        text: `Hi ${name}, welcome to Eventure! Your account has been created successfully.`,
+      });
+    } catch (emailErr) {
+      console.warn('Failed to send welcome email:', emailErr?.message || emailErr);
+    }
 
     res.status(201).json({ message: "User registered", user: newUser });
   } catch (err) {
