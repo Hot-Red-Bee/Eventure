@@ -24,6 +24,11 @@ export const registerUser = async (req, res) => {
     });
 
     // Create JWT token and set cookie (auto-login on registration)
+    if (!process.env.JWT_SECRET) {
+      console.warn('JWT_SECRET is not configured; skipping token creation');
+      return res.status(201).json({ message: "User registered successfully (no JWT configured)", user });
+    }
+
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
@@ -39,7 +44,8 @@ export const registerUser = async (req, res) => {
 
     res.status(201).json({ message: "User registered successfully", user, token });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    console.error('registerUser error:', err);
+    res.status(500).json({ error: err?.message || "Server error" });
   }
 };
 
@@ -67,9 +73,10 @@ export const loginUser = async (req, res) => {
       sameSite: "strict",
     });
 
-    res.json({ message: "Login successful", user });
+    res.json({ message: "Login successful", user, token });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    console.error('loginUser error:', err);
+    res.status(500).json({ error: err?.message || "Server error" });
   }
 };
 
