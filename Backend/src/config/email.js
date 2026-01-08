@@ -8,4 +8,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Don't verify transporter on startup to avoid SMTP timeout errors
+// transporter.verify((error, success) => {
+//   if (error) console.log("Email transporter error:", error);
+//   else console.log("Email transporter ready");
+// });
+
 export default transporter;
