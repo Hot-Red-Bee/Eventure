@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaUserPlus, FaBan, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
-import { authAPI, setAuthToken } from '../utilis/api';
+import auth from '../utilis/auth';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -54,14 +54,15 @@ const SignUp = () => {
 
     try {
       setSubmitting(true);
-      const res = await authAPI.signup({ name, email, password, role });
-      // backend may return { user, token, message } or { message }
-      const token = res?.token || res?.data?.token;
-      if (token) setAuthToken(token);
-      const message = res?.message || res?.msg || 'Registration successful';
+      const result = await auth.signup({ name, email, password, role });
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Registration failed');
+      }
+
+      const user = result.user;
+      const message = 'Registration successful';
       setSuccess(message);
-      // if backend returns user, derive role; otherwise use selected role
-      const user = res?.user || res?.data?.user || null;
+
       const redirectRole = user?.role || role;
       setTimeout(() => {
         if (redirectRole === 'admin') navigate('/admin');
