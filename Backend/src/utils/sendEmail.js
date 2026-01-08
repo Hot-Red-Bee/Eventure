@@ -36,7 +36,11 @@ export const transporter = nodemailer.createTransport({
  * @returns {Promise<any>}
  */
 export const sendEmail = async ({ to, subject, text, html, from }) => {
-  if (!transporter) throw new Error("Email transporter not configured");
+  if (!transporter) {
+    console.warn('Email transporter not configured');
+    return null;
+  }
+
   const mailOptions = {
     from: from || process.env.EMAIL_FROM || process.env.EMAIL_USER,
     to,
@@ -44,6 +48,13 @@ export const sendEmail = async ({ to, subject, text, html, from }) => {
     text: text || undefined,
     html: html || undefined,
   };
-  return transporter.sendMail(mailOptions);
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return info;
+  } catch (err) {
+    console.warn('sendEmail failed:', err?.message || err);
+    return null;
+  }
 };
 // ...existing code...
